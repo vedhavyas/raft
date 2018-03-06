@@ -20,7 +20,7 @@ type log struct {
 // Server is a single peer participating in the raft protocol
 type Server struct {
 	currentTerm int
-	votedFor    int
+	votedFor    string
 	logs        []log
 
 	commitIndex int
@@ -33,5 +33,5 @@ type Server struct {
 	peers  []string // list of peer servers
 	leader string   // leader id
 
-	mu sync.Mutex
+	mu sync.RWMutex
 }
