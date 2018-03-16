@@ -33,11 +33,11 @@ func (s *Server) Append(req *AppendRequest, res *AppendResult) {
 	defer s.mu.Unlock()
 
 	var failed bool
-
 	defer func() {
 		res.Term = s.currentTerm
 		res.Success = !failed
 	}()
+
 	// check if this is from a stale leader
 	if req.Term < s.currentTerm {
 		failed = true
@@ -45,7 +45,7 @@ func (s *Server) Append(req *AppendRequest, res *AppendResult) {
 	}
 
 	// check if this server is stale
-	if req.Term > s.currentTerm {
+	if s.state != follower {
 		s.state = follower
 		s.currentTerm = req.Term
 		s.votedFor = ""
@@ -61,7 +61,6 @@ func (s *Server) Append(req *AppendRequest, res *AppendResult) {
 	l := s.logs[req.PrevLogIndex]
 	if l.term != req.PrevLogTerm {
 		s.logs = s.logs[:req.PrevLogIndex]
-		return
 	}
 
 	// lets append the new log to the logs
@@ -69,13 +68,15 @@ func (s *Server) Append(req *AppendRequest, res *AppendResult) {
 		s.logs = append(s.logs, log{term: req.Term, command: e})
 	}
 
-	// TODO: should i apply the new logs to state machine here ?
-	// TODO check if this can be a problem at the start ?
-	// maybe initialise commit index with -1
-	if req.LeaderCommit > s.commitIndex {
+	// maybe initialise commit index and last applied to -1
+	if req.LeaderCommit > s.commitIndex && len(s.logs) > 0 {
 		s.commitIndex = minOf(req.LeaderCommit, len(s.logs)-1)
 	}
 
+	if s.commitIndex > s.lastApplied {
+		s.lastApplied++
+		// TODO: apply log at last applied to state machine
+	}
 }
 
 type RequestVoteReq struct {
