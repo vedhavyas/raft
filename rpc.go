@@ -7,7 +7,7 @@ type AppendRequest struct {
 	ID           int
 	PrevLogIndex int
 	PrevLogTerm  int
-	Entries      []string
+	Entries      []log
 	LeaderCommit int
 }
 
@@ -65,7 +65,7 @@ func (s *Server) Append(req *AppendRequest, res *AppendResult) {
 
 	// lets append the new log to the logs
 	for _, e := range req.Entries {
-		s.logs = append(s.logs, log{term: req.Term, command: e})
+		s.logs = append(s.logs, e)
 	}
 
 	// maybe initialise commit index and last applied to -1
