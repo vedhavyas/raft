@@ -89,7 +89,7 @@ type RequestVoteResp struct {
 	VoteGranted bool
 }
 
-func (s *Server) RequestVote(req *RequestVoteReq, res RequestVoteResp) {
+func (s *Server) RequestVote(req *RequestVoteReq, res *RequestVoteResp) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

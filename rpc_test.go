@@ -277,3 +277,145 @@ func TestServer_Append(t *testing.T) {
 
 	}
 }
+
+func TestServer_RequestVote(t *testing.T) {
+	tests := []struct {
+		fVoted     string
+		fTerm      int
+		cTerm      int
+		cLastTerm  int
+		cLastIndex int
+		logs       []log
+		result     bool
+	}{
+		// already voted
+		{
+			fVoted: "someone else",
+			fTerm:  2,
+			cTerm:  3,
+			result: false,
+		},
+
+		// canditate with lower term
+		{
+			fTerm:  4,
+			cTerm:  3,
+			result: false,
+		},
+
+		// no logs
+		{
+			fTerm:  2,
+			cTerm:  3,
+			result: true,
+		},
+
+		// follower has more updated logs
+		{
+			fTerm:     2,
+			cTerm:     3,
+			cLastTerm: 1,
+			logs: []log{
+				{
+					term:    0,
+					command: "test",
+				},
+
+				{
+					term:    1,
+					command: "test2",
+				},
+
+				{
+					term:    2,
+					command: "test3",
+				},
+			},
+			result: false,
+		},
+
+		// candidate has more updated logs
+		{
+			fTerm:     1,
+			cTerm:     3,
+			cLastTerm: 2,
+			logs: []log{
+				{
+					term:    0,
+					command: "test",
+				},
+
+				{
+					term:    1,
+					command: "test2",
+				},
+			},
+			result: true,
+		},
+
+		// same term but follower has longer logs
+		{
+			fTerm:      1,
+			cTerm:      3,
+			cLastTerm:  2,
+			cLastIndex: 1,
+			logs: []log{
+				{
+					term:    0,
+					command: "test",
+				},
+
+				{
+					term:    1,
+					command: "test2",
+				},
+
+				{
+					term:    2,
+					command: "test3",
+				},
+			},
+			result: false,
+		},
+
+		// same term but follower has less logs
+		{
+			fTerm:      1,
+			cTerm:      3,
+			cLastTerm:  2,
+			cLastIndex: 3,
+			logs: []log{
+				{
+					term:    0,
+					command: "test",
+				},
+
+				{
+					term:    2,
+					command: "test2",
+				},
+			},
+			result: true,
+		},
+	}
+
+	f := new(Server)
+	req := new(RequestVoteReq)
+	res := new(RequestVoteResp)
+	for _, c := range tests {
+		f.currentTerm = c.fTerm
+		f.votedFor = c.fVoted
+		f.logs = c.logs
+		req.Term = c.cTerm
+		req.LastLogTerm = c.cLastTerm
+		req.LastLogIndex = c.cLastIndex
+		f.RequestVote(req, res)
+		if res.VoteGranted != c.result {
+			t.Fatalf("expected %t but got %t", c.result, res.VoteGranted)
+		}
+
+		if res.Term != c.fTerm {
+			t.Fatalf("expected %d term but got %d term", c.fTerm, res.Term)
+		}
+	}
+}
